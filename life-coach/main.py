@@ -37,6 +37,9 @@ if "messages" not in st.session_state:
 if "dialogue_count" not in st.session_state:  
     st.session_state.dialogue_count = 0  
   
+if "user_input" not in st.session_state:  
+    st.session_state.user_input = ""  
+  
 with st.sidebar:  
     st.markdown("### 🌱 关于")  
     st.markdown("**生命动力 · AI 教练**\n\n不用选模式，直接说。AI 教练会自动用聆听、发问、区分、回应的方式帮助你。")  
@@ -47,6 +50,7 @@ with st.sidebar:
         st.session_state.engine.reset_conversation()  
         st.session_state.messages = []  
         st.session_state.dialogue_count = 0  
+        st.session_state.user_input = ""  
         st.rerun()  
   
 st.markdown('<p class="main-header">🌱 生命动力 · AI 教练</p>', unsafe_allow_html=True)  
@@ -82,7 +86,13 @@ if st.session_state.messages:
             if tags:  
                 st.markdown("".join(tags), unsafe_allow_html=True)  
   
-user_input = st.text_area("说说你现在的情况或感受...", height=100, placeholder="例如：我今天感到很迷茫，不知道自己在追求什么...")  
+user_input = st.text_area(  
+    "说说你现在的情况或感受...",  
+    value=st.session_state.user_input,  
+    height=100,  
+    placeholder="例如：我今天感到很迷茫，不知道自己在追求什么...",  
+    key="input_area"  
+)  
   
 col1, col2 = st.columns([3, 1])  
 with col1:  
@@ -96,12 +106,14 @@ if send_clicked and user_input.strip():
         st.session_state.messages.append({"role": "user", "content": user_input})  
         st.session_state.messages.append({"role": "assistant", "content": reply})  
         st.session_state.dialogue_count += 1  
+        st.session_state.user_input = ""  
     st.rerun()  
   
 if reset_clicked:  
     st.session_state.engine.reset_conversation()  
     st.session_state.messages = []  
     st.session_state.dialogue_count = 0  
+    st.session_state.user_input = ""  
     st.rerun()  
   
 st.markdown("---")  
