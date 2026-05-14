@@ -1,10 +1,11 @@
 """  
 🌱 生命动力 · AI 教练小程序  
-简化版 - 自动教练模式  
+完整版 - 含用户注册/登录 + 数据库  
 """  
 import streamlit as st  
 from core.coach_engine import CoachEngine  
 from core.emotion_detector import EmotionDetector  
+from core.database import Database  
   
 st.set_page_config(  
     page_title="生命动力 · AI 教练",  
@@ -20,17 +21,21 @@ st.markdown("""
     .user-message { background-color: #e8f5e9; margin-left: 20%; }  
     .coach-message { background-color: #f5f5f5; margin-right: 5%; }  
     .emotion-tag { display: inline-block; background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-right: 4px; }  
-    textarea { min-height: 80px !important; }  
 </style>  
 """, unsafe_allow_html=True)  
   
-if "engine" not in st.session_state:  
+if "db" not in st.session_state:  
     try:  
-        st.session_state.engine = CoachEngine()  
-        st.session_state.initialized = True  
-    except ValueError as e:  
-        st.session_state.initialized = False  
-        st.session_state.error_msg = str(e)  
+        st.session_state.db = Database()  
+        st.session_state.db_ready = True  
+    except:  
+        st.session_state.db_ready = False  
+  
+if "logged_in" not in st.session_state:  
+    st.session_state.logged_in = False  
+  
+if "user" not in st.session_state:  
+    st.session_state.user = None  
   
 if "messages" not in st.session_state:  
     st.session_state.messages = []  
@@ -38,28 +43,85 @@ if "messages" not in st.session_state:
 if "dialogue_count" not in st.session_state:  
     st.session_state.dialogue_count = 0  
   
-if "clear_input" not in st.session_state:  
-    st.session_state.clear_input = ""  
+if not st.session_state.logged_in:  
+    st.markdown('<p class="main-header">🌱 生命动力 · AI 教练</p>', unsafe_allow_html=True)  
+    st.markdown('<p class="sub-header">聆听 · 发问 · 区分 · 回应</p>', unsafe_allow_html=True)  
+      
+    tab1, tab2 = st.tabs(["🔑 登录", "📝 注册"])  
+      
+    with tab1:  
+        st.markdown("### 欢迎回来")  
+        login_user = st.text_input("用户名", key="login_user")  
+        login_pass = st.text_input("密码", type="password", key="login_pass")  
+        if st.button("登录", type="primary", use_container_width=True):  
+            if login_user and login_pass:  
+                result = st.session_state.db.login_user(login_user, login_pass)  
+                if result["success"]:  
+                    st.session_state.logged_in = True  
+                    st.session_state.user = result["user"]  
+                    st.session_state.messages = []  
+                    st.session_state.dialogue_count = 0  
+                    st.rerun()  
+                else:  
+                    st.error(result["error"])  
+            else:  
+                st.warning("请填写用户名和密码")  
+      
+    with tab2:  
+        st.markdown("### 创建账号")  
+        reg_user = st.text_input("用户名", key="reg_user")  
+        reg_name = st.text_input("显示名称（选填）", key="reg_name")  
+        reg_pass = st.text_input("密码", type="password", key="reg_pass")  
+        reg_pass2 = st.text_input("确认密码", type="password", key="reg_pass2")  
+        if st.button("注册", use_container_width=True):  
+            if reg_user and reg_pass:  
+                if reg_pass != reg_pass2:  
+                    st.error("两次密码不一致")  
+                elif len(reg_pass) < 4:  
+                    st.error("密码至少 4 位")  
+                else:  
+                    result = st.session_state.db.register_user(reg_user, reg_pass, reg_name or reg_user)  
+                    if result["success"]:  
+                        st.success("注册成功！请切换到登录页登录")  
+                    else:  
+                        st.error(result["error"])  
+            else:  
+                st.warning("请填写用户名和密码")  
+    st.stop()  
+  
+user = st.session_state.user  
+display_name = user.get("display_name", user.get("username", "学员"))  
   
 with st.sidebar:  
-    st.markdown("###  关于")  
-    st.markdown("**生命动力 · AI 教练**\n\n不用选模式，直接说。AI 教练会自动用聆听、发问、区分、回应的方式帮助你。")  
+    st.markdown(f"### 👋 你好，{display_name}")  
     st.markdown("---")  
-    st.markdown(f"### 📊 对话统计")  
-    st.markdown(f"已进行 **{st.session_state.dialogue_count}** 轮对话")  
-    if st.button("🗑️ 清空对话", use_container_width=True):  
-        st.session_state.engine.reset_conversation()  
+    st.markdown("### 📖 使用说明")  
+    st.markdown("- 直接说出你的感受或困惑")  
+    st.markdown("- AI 教练会自动用合适的方式回应")  
+    st.markdown("- 对话会保存，随时可查看")  
+    st.markdown("---")  
+      
+    if st.button("📜 查看历史对话", use_container_width=True):  
+        st.session_state.show_history = not st.session_state.get("show_history", False)  
+      
+    if st.session_state.get("show_history"):  
+        convs = st.session_state.db.get_user_conversations(user["id"], limit=20)  
+        if convs:  
+            for i, c in enumerate(convs):  
+                st.markdown(f"**{i+1}**. {c['user_input'][:30]}...")  
+        else:  
+            st.caption("暂无历史记录")  
+      
+    st.markdown("---")  
+    if st.button("🚪 退出登录", use_container_width=True):  
+        st.session_state.logged_in = False  
+        st.session_state.user = None  
         st.session_state.messages = []  
         st.session_state.dialogue_count = 0  
-        st.session_state.clear_input = ""  
         st.rerun()  
   
 st.markdown('<p class="main-header">🌱 生命动力 · AI 教练</p>', unsafe_allow_html=True)  
 st.markdown('<p class="sub-header">直接说出你的感受，教练会自动回应</p>', unsafe_allow_html=True)  
-  
-if not st.session_state.initialized:  
-    st.error(f"⚠️ {st.session_state.error_msg}")  
-    st.stop()  
   
 st.markdown("### 对话")  
 chat_container = st.container()  
@@ -87,7 +149,6 @@ if st.session_state.messages:
             if tags:  
                 st.markdown("".join(tags), unsafe_allow_html=True)  
   
-# 用 unique key 来强制刷新输入框  
 input_key = f"input_{st.session_state.dialogue_count}"  
 user_input = st.text_area(  
     "说说你现在的情况或感受...",  
@@ -98,20 +159,33 @@ user_input = st.text_area(
   
 col1, col2 = st.columns([3, 1])  
 with col1:  
-    send_clicked = st.button("️ 发送", type="primary", use_container_width=True)  
+    send_clicked = st.button("✉️ 发送", type="primary", use_container_width=True)  
 with col2:  
     reset_clicked = st.button("🔄 重置", use_container_width=True)  
   
 if send_clicked and user_input.strip():  
     with st.spinner("教练正在思考..."):  
-        reply = st.session_state.engine.get_response(user_input)  
+        analysis = EmotionDetector.analyze(user_input)  
+        emotion = analysis["emotion"]["primary"]  
+        topic = analysis["topic"]["primary"]  
+          
+        engine = CoachEngine()  
+        reply = engine.get_response(user_input)  
+          
         st.session_state.messages.append({"role": "user", "content": user_input})  
         st.session_state.messages.append({"role": "assistant", "content": reply})  
         st.session_state.dialogue_count += 1  
+          
+        st.session_state.db.save_conversation(  
+            user_id=user["id"],  
+            user_input=user_input,  
+            coach_reply=reply,  
+            emotion=emotion,  
+            topic=topic  
+        )  
     st.rerun()  
   
 if reset_clicked:  
-    st.session_state.engine.reset_conversation()  
     st.session_state.messages = []  
     st.session_state.dialogue_count = 0  
     st.rerun()  
