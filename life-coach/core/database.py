@@ -1,16 +1,19 @@
-"""Supabase 数据库操作 - 最终修复版"""  
+"""Supabase 数据库操作"""  
 from supabase import create_client, Client  
 import streamlit as st  
 import hashlib  
   
 class Database:  
     def __init__(self):  
-        # 修正：使用你最早提供的地址和密钥（这是正确的组合）  
+        # 使用你截图里的网址  
         self.url = "https://ydrypovzrfvmotlsaomw.supabase.co "  
+        # 使用这个项目对应的密钥  
         self.key = "sb_secret_xdljfyVFI8fcSFolTr3sMg_6Bc4yph3"  
           
         if not self.url or not self.key:  
             raise ValueError("Supabase 配置未设置")  
+          
+        print(f"DEBUG: 正在连接 -> {self.url}")  
         self.client: Client = create_client(self.url, self.key)  
       
     def hash_password(self, password: str) -> str:  
