@@ -1,12 +1,12 @@
-"""Supabase 数据库操作"""  
+"""Supabase 数据库操作 - 修复版"""  
 from supabase import create_client, Client  
 import streamlit as st  
 import hashlib  
   
 class Database:  
     def __init__(self):  
-        # 最终确认的正确地址  
-        self.url = "https://ydrypovzrfvmotlsaomw.supabase.co "  
+        # 修正：使用截图地址栏中显示的 zgy 项目地址  
+        self.url = "https://zgyzjxryvlgwzqkqfkoo.supabase.co "  
         self.key = "sb_secret_1Bi1unY-W2GkrzhDgKfqlw_M0GjMQXB"  
           
         if not self.url or not self.key:  
