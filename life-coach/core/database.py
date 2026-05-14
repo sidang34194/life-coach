@@ -12,7 +12,7 @@ class Database:
             "https://zgyzjxryvlgwzqkqfkoo.supabase.co/rest/v1 " # 尝试第二个网址  
         ]  
         keys = [  
-            "sb_secret_xdljfyVFI8fcSFolTr3sMg_6Bc4yph3",  
+            "sb_secret_B4kQHMkT3BHSN-K-lGIISw_7dVuYO0K",  
             "sb_secret_1Bi1unY-W2GkrzhDgKfqlw_M0GjMQXB" # 尝试第二个密钥  
         ]  
           
