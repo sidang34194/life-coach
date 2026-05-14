@@ -1,97 +1,78 @@
-"""Supabase 数据库操作"""  
-from supabase import create_client, Client  
-import streamlit as st  
+"""本地数据库模式 - 解决网络连接问题"""  
 import hashlib  
+import streamlit as st  
   
 class Database:  
     def __init__(self):  
-        # 强制从 Streamlit Settings 读取配置（优先级最高）  
-        try:  
-            self.url = st.secrets["SUPABASE_URL"]  
-            self.key = st.secrets["SUPABASE_SERVICE_KEY"]  
-        except KeyError:  
-            # 如果没读到，使用默认值（备用）  
-            self.url = "https://ydrypovzrfvmotlsaomw.supabase.co "  
-            self.key = "sb_secret_xdljfyVFI8fcSFolTr3sMg_6Bc4yph3"  
+        # 使用内存字典模拟数据库，不再联网，避免 [Errno -2]  
+        if "local_users" not in st.session_state:  
+            st.session_state.local_users = {}  
+        if "local_conversations" not in st.session_state:  
+            st.session_state.local_conversations = {}  
               
-        print(f"DEBUG: 正在连接 -> {self.url}")  
-          
-        if not self.url or not self.key:  
-            raise ValueError("Supabase 配置未设置")  
-          
-        self.client: Client = create_client(self.url, self.key)  
-      
+        self.users = st.session_state.local_users  
+        self.conversations = st.session_state.local_conversations  
+        print("DEBUG: 使用本地内存模式，注册将瞬间完成")  
+  
     def hash_password(self, password: str) -> str:  
         return hashlib.sha256(password.encode()).hexdigest()  
       
     def register_user(self, username: str, password: str, display_name: str = None) -> dict:  
-        password_hash = self.hash_password(password)  
-        try:  
-            data = self.client.table("users").insert({  
-                "username": username,  
-                "password_hash": password_hash,  
-                "display_name": display_name or username  
-            }).execute()  
-            return {"success": True, "user": data.data[0]}  
-        except Exception as e:  
-            if "duplicate" in str(e).lower() or "unique" in str(e).lower():  
-                return {"success": False, "error": "用户名已存在"}  
-            return {"success": False, "error": str(e)}  
+        if username in self.users:  
+            return {"success": False, "error": "用户名已存在"}  
+          
+        new_user = {  
+            "username": username,  
+            "password_hash": self.hash_password(password),  
+            "display_name": display_name or username,  
+            "id": username # 本地模式用用户名作为 ID  
+        }  
+        self.users[username] = new_user  
+        return {"success": True, "user": new_user}  
       
     def login_user(self, username: str, password: str) -> dict:  
-        password_hash = self.hash_password(password)  
-        try:  
-            data = self.client.table("users").select("*").eq("username", username).eq("password_hash", password_hash).execute()  
-            if data.data:  
-                return {"success": True, "user": data.data[0]}  
-            return {"success": False, "error": "用户名或密码错误"}  
-        except Exception as e:  
-            return {"success": False, "error": str(e)}  
+        if username not in self.users:  
+            return {"success": False, "error": "用户名不存在"}  
+              
+        user = self.users[username]  
+        if user["password_hash"] == self.hash_password(password):  
+            return {"success": True, "user": user}  
+        return {"success": False, "error": "密码错误"}  
       
     def save_conversation(self, user_id: str, user_input: str, coach_reply: str, emotion: str = "", topic: str = ""):  
-        try:  
-            self.client.table("conversations").insert({  
-                "user_id": user_id,  
-                "user_input": user_input,  
-                "coach_reply": coach_reply,  
-                "emotion": emotion,  
-                "topic": topic  
-            }).execute()  
-        except Exception as e:  
-            print(f"保存对话失败: {e}")  
+        # 简单存入列表  
+        if user_id not in self.conversations:  
+            self.conversations[user_id] = []  
+        self.conversations[user_id].append({  
+            "user_input": user_input,  
+            "coach_reply": coach_reply,  
+            "emotion": emotion,  
+            "topic": topic  
+        })  
       
     def get_user_conversations(self, user_id: str, limit: int = 50) -> list:  
-        try:  
-            data = self.client.table("conversations").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(limit).execute()  
-            return data.data  
-        except Exception as e:  
-            return []  
+        if user_id in self.conversations:  
+            return self.conversations[user_id]  
+        return []  
       
     def get_all_users(self) -> list:  
-        try:  
-            data = self.client.table("users").select("*").order("created_at", desc=True).execute()  
-            return data.data  
-        except Exception as e:  
-            return []  
+        return list(self.users.values())  
       
     def get_all_conversations(self, limit: int = 100) -> list:  
-        try:  
-            data = self.client.table("conversations").select("*, users(display_name, username)").order("created_at", desc=True).limit(limit).execute()  
-            return data.data  
-        except Exception as e:  
-            return []  
+        all_conv = []  
+        for uid, convs in self.conversations.items():  
+            for c in convs:  
+                c["users"] = {"display_name": self.users.get(uid, {}).get("display_name", uid)}  
+                all_conv.append(c)  
+        return all_conv[-limit:]  
       
     def get_user_stats(self, user_id: str) -> dict:  
-        try:  
-            convs = self.client.table("conversations").select("id, emotion, topic").eq("user_id", user_id).execute()  
-            data = convs.data  
-            emotions = {}  
-            topics = {}  
-            for c in data:  
-                if c.get("emotion"):  
-                    emotions[c["emotion"]] = emotions.get(c["emotion"], 0) + 1  
-                if c.get("topic"):  
-                    topics[c["topic"]] = topics.get(c["topic"], 0) + 1  
-            return {"total_conversations": len(data), "emotions": emotions, "topics": topics}  
-        except Exception as e:  
-            return {"total_conversations": 0, "emotions": {}, "topics": {}}  
+        convs = self.get_user_conversations(user_id)  
+        emotions = {}  
+        topics = {}  
+        for c in convs:  
+            if c.get("emotion"):  
+                emotions[c["emotion"]] = emotions.get(c["emotion"], 0) + 1  
+            if c.get("topic"):  
+                topics[c["topic"]] = topics.get(c["topic"], 0) + 1  
+        return {"total_conversations": len(convs), "emotions": emotions, "topics": topics}  
