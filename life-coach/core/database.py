@@ -1,13 +1,13 @@
-"""Supabase 数据库操作"""  
+"""Supabase 数据库操作 - 最终确认版"""  
 from supabase import create_client, Client  
 import streamlit as st  
 import hashlib  
   
 class Database:  
     def __init__(self):  
-        # 使用你截图里的网址  
+        # 使用你刚才浏览器验证过的正确地址  
         self.url = "https://ydrypovzrfvmotlsaomw.supabase.co "  
-        # 使用这个项目对应的密钥  
+        # 使用对应的密钥  
         self.key = "sb_secret_xdljfyVFI8fcSFolTr3sMg_6Bc4yph3"  
           
         if not self.url or not self.key:  
