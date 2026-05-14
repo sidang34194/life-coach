@@ -1,109 +1,112 @@
-"""教练对话引擎 - 生命动力专业知识库版"""  
+"""大师级 AI 教练引擎 - 通义千问 Qwen 版"""  
 import streamlit as st  
-from zhipuai import ZhipuAI  
+from openai import OpenAI  
   
 class CoachEngine:  
     def __init__(self):  
-        api_key = st.secrets.get("ZHIPU_API_KEY", "")  
+        # 读取千问 API Key  
+        api_key = st.secrets.get("DASHSCOPE_API_KEY", "")  
         if not api_key:  
-            raise ValueError("API Key 未配置")  
-        self.client = ZhipuAI(api_key=api_key)  
-        self.conversation_history = []  
-      
+            raise ValueError("通义千问 API Key 未配置")  
+          
+        # 初始化 OpenAI 客户端，指向阿里 DashScope  
+        self.client = OpenAI(  
+            api_key=api_key,  
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1 ",  
+        )  
+          
+        # 初始化"教练状态"  
+        if "coach_state" not in st.session_state:  
+            st.session_state.coach_state = {  
+                "trust_level": 0,           
+                "user_emotion": "未知",      
+                "coaching_phase": "建立连接",   
+                "insights": []               
+            }  
+  
     def get_response(self, user_input: str) -> str:  
-        system_prompt = """你是一位精通「生命动力（Life Dynamics）教练技术」的专业教练。请严格按照以下知识库进行教练对话：  
+        state = st.session_state.coach_state  
+          
+        # 动态上下文  
+        dynamic_context = ""  
+        if state["trust_level"] > 50:  
+            dynamic_context += "你们已建立信任，可以更深度区分和挑战。"  
+          
+        # 阶段策略  
+        phase_prompt = ""  
+        if state["coaching_phase"] == "建立连接":  
+            phase_prompt = "当前阶段：建立安全。重点是接纳、共情，多用'我感受到'，少发问。"  
+        elif state["coaching_phase"] == "探索":  
+            phase_prompt = "当前阶段：探索现状。用 3F 聆听（事实、情绪、意图）厘清，区分事实与脑补。"  
+        elif state["coaching_phase"] == "区分":  
+            phase_prompt = "当前阶段：深度区分。温和指出矛盾，挑战限制性信念（事实 vs 假设，可控 vs 不可控）。"  
+        elif state["coaching_phase"] == "突破":  
+            phase_prompt = "当前阶段：突破限制。激发内在力量，引导重建支持性信念。"  
+        elif state["coaching_phase"] == "行动":  
+            phase_prompt = "当前阶段：落地行动。引导定出最小行动，不替 TA 决定。"  
   
-## 核心信念（必须内化）  
-1. 每个人都是OK的，只是暂时陷入盲区。  
-2. 案主拥有解决自己问题的全部资源。  
-3. 行为背后必有正向动机。  
-4. 改变是必然的，成长是选择。  
+        system_prompt = f"""你是「生命动力（Life Dynamics）」大师级教练，精通 3F 聆听、区分、发问、回应。  
+你已超越话术阶段，回应是流动、直觉、有血有肉的。  
   
-## 四大核心技能  
+## 核心心法  
+1. **不评判，不建议**：你是镜子，只反馈，不给答案。  
+2. **每个人本自具足**：深信 TA 有资源，你只负责唤醒。  
+3. **行为背后必有正向动机**：所有的逃避/愤怒，本质都是渴望被爱和安全。  
   
-### 1. 聆听（3F法）  
-- Fact（事实）：听客观事件，不演绎  
-- Feeling（感受）：听情绪（愤怒/委屈/焦虑/无力）  
-- Focus（意图）：听情绪背后真正想要的  
-  
-### 2. 区分（最核心技能）  
-必做6大区分：  
-- 事实 VS 主观解读/脑补  
-- 当下情绪 VS 事情真相  
-- 过去已定 VS 当下选择 VS 未来创造  
-- 自己可控 VS 外界不可控  
-- 限制性信念 VS 支持性信念  
-- 受害者心态 VS 100%责任者心态  
-  
-万能区分话术：  
-- "这是事实，还是你的解读？"  
-- "这个想法是在限制你，还是在支持你？"  
-- "你现在是受害者心态，还是为自己负责？"  
-- "这件事里，哪些是你可以控制的？"  
-  
-### 3. 发问（启发式，不审问）  
-原则：多开放少封闭、多未来少过去、多正向少负向、多好奇少质疑。少用"为什么"，多用"是什么/怎么样/接下来可以怎么做"。  
-  
-分类发问库：  
-- 现状类："现在真实的情况是什么？""你当下最困扰的是什么？"  
-- 目标类："你真正想要的是什么？""目标达成后你会是什么样子？"  
-- 资源类："你有哪些能力/优势可以支持你？""过往你有过类似成功吗？"  
-- 信念类："心里冒出来最限制你的那句话是什么？""这个想法有百分百证据吗？"  
-- 行动类："此刻你最想做的一小步是什么？""具体什么时候做？"  
-  
-### 4. 回应（做镜子，不评判不建议）  
-只说"我观察到/我感受到"，不贴标签、不指责、不讲道理。  
-- 观察式："我留意到你说到这里语速变慢/沉默/低头。"  
-- 情绪式："我感受到你内心委屈/纠结/又渴望又害怕。"  
-- 模式式："我发现你每次遇到压力，都会习惯性退缩/自我否定。"  
-- 矛盾式："你很想要这个结果，但行为上一直在回避，你有觉察到吗？"  
-  
-## 对话7步流程  
-1. 暖场建立安全 → 2. 锁定主题+目标 → 3. 深度厘清现状（3F聆听+区分）  
-4. 挖资源+破限制性信念 → 5. 共创方案+定具体行动 → 6. 总结觉察 → 7. 收尾确认行动  
-  
-## 限制性信念突破5步法  
-1. 看见命名：说出困住自己的话  
-2. 溯源源头：最早什么时候形成的  
-3. 质疑瓦解：找反例证明它不是真相  
-4. 重建新信念：替换成正向赋能的短句  
-5. 小行动验证：用极小行动落地内化  
-  
-## 常见限制性信念清单  
-自我价值类："我不够好/我不值得被爱/我没用/我不如别人"  
-能力类："我做不到/我不行/我会失败/我学不会/我无法改变"  
-关系类："没人会真心爱我/我会被抛弃/我必须讨好别人"  
-成功类："努力没用/成功是运气/我不能成功/我必须完美才能行动"  
+## 你的"人性"特质  
+- **拒绝机械感**：像真人一样说话，用"留白"、"隐喻"。  
+    - ❌ "这是事实还是解读？" (太生硬)  
+    - ✅ "这份难过背后，是不是也藏着一些你的期待？" (自然、有温度)  
+- **语气流动**：根据学员状态，从"温和陪伴"自然过渡到"有力挑战"。  
+- **自适应**：{dynamic_context} {phase_prompt}  
   
 ## 回复要求  
-- 每次回复控制在3-5句话以内  
-- 根据案主状态自动判断用聆听/区分/发问/回应  
-- 不评判、不说教、不给标准答案  
-- 用提问引导案主自己发现答案  
-- 接纳情绪，帮助用户看到盲点  
-- 语言简短、温暖、有力量"""  
-          
+- 简短有力（3-5 句）。  
+- 一次只问一个最核心的问题。  
+- 语言温暖、中正、有力量。"""  
+  
         messages = [  
             {"role": "system", "content": system_prompt},  
-            *self.conversation_history,  
+            *st.session_state.get("messages", [])[-8:],  
             {"role": "user", "content": user_input}  
         ]  
           
         try:  
             response = self.client.chat.completions.create(  
-                model="glm-4-flash",  
+                model="qwen-plus", # 使用通义千问-Plus，情商更高  
                 messages=messages,  
-                temperature=0.8,  
+                temperature=0.85, # 稍微提高温度，让回答更灵动  
                 max_tokens=500  
             )  
             reply = response.choices[0].message.content  
-            self.conversation_history.append({"role": "user", "content": user_input})  
-            self.conversation_history.append({"role": "assistant", "content": reply})  
-            if len(self.conversation_history) > 20:  
-                self.conversation_history = self.conversation_history[-20:]  
+              
+            # 进化逻辑  
+            self._evolve_coach_state(user_input, reply)  
             return reply  
         except Exception as e:  
-            return f"抱歉，教练暂时无法回应。错误：{str(e)}"  
-      
+            return f"教练暂时无法回应：{str(e)}"  
+  
+    def _evolve_coach_state(self, user_input, reply):  
+        """后台自动进化"""  
+        state = st.session_state.coach_state  
+        if any(w in user_input for w in ["哭", "难过", "委屈", "累", "烦"]):  
+            state["user_emotion"] = "情绪波动"  
+            if state["trust_level"] < 30: state["coaching_phase"] = "建立连接"  
+        elif any(w in user_input for w in ["怎么办", "迷茫", "卡住"]):  
+            state["coaching_phase"] = "探索"  
+        elif any(w in user_input for w in ["但是", "可是", "我怕"]):  
+            state["coaching_phase"] = "区分"  
+        elif any(w in user_input for w in ["我想", "我要", "打算"]):  
+            state["coaching_phase"] = "行动"  
+              
+        state["trust_level"] = min(100, state["trust_level"] + 5)  
+        st.session_state.coach_state = state  
+  
     def reset_conversation(self):  
-        self.conversation_history = []  
+        st.session_state.coach_state = {  
+            "trust_level": 0,  
+            "user_emotion": "未知",  
+            "coaching_phase": "建立连接",  
+            "insights": []  
+        }  
+        st.session_state.messages = []  
