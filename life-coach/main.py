@@ -20,6 +20,7 @@ st.markdown("""
     .user-message { background-color: #e8f5e9; margin-left: 20%; }  
     .coach-message { background-color: #f5f5f5; margin-right: 5%; }  
     .emotion-tag { display: inline-block; background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-right: 4px; }  
+    textarea { min-height: 80px !important; }  
 </style>  
 """, unsafe_allow_html=True)  
   
@@ -37,11 +38,11 @@ if "messages" not in st.session_state:
 if "dialogue_count" not in st.session_state:  
     st.session_state.dialogue_count = 0  
   
-if "user_input" not in st.session_state:  
-    st.session_state.user_input = ""  
+if "clear_input" not in st.session_state:  
+    st.session_state.clear_input = ""  
   
 with st.sidebar:  
-    st.markdown("### 🌱 关于")  
+    st.markdown("###  关于")  
     st.markdown("**生命动力 · AI 教练**\n\n不用选模式，直接说。AI 教练会自动用聆听、发问、区分、回应的方式帮助你。")  
     st.markdown("---")  
     st.markdown(f"### 📊 对话统计")  
@@ -50,7 +51,7 @@ with st.sidebar:
         st.session_state.engine.reset_conversation()  
         st.session_state.messages = []  
         st.session_state.dialogue_count = 0  
-        st.session_state.user_input = ""  
+        st.session_state.clear_input = ""  
         st.rerun()  
   
 st.markdown('<p class="main-header">🌱 生命动力 · AI 教练</p>', unsafe_allow_html=True)  
@@ -86,17 +87,18 @@ if st.session_state.messages:
             if tags:  
                 st.markdown("".join(tags), unsafe_allow_html=True)  
   
+# 用 unique key 来强制刷新输入框  
+input_key = f"input_{st.session_state.dialogue_count}"  
 user_input = st.text_area(  
     "说说你现在的情况或感受...",  
-    value=st.session_state.user_input,  
     height=100,  
     placeholder="例如：我今天感到很迷茫，不知道自己在追求什么...",  
-    key="input_area"  
+    key=input_key  
 )  
   
 col1, col2 = st.columns([3, 1])  
 with col1:  
-    send_clicked = st.button("✉️ 发送", type="primary", use_container_width=True)  
+    send_clicked = st.button("️ 发送", type="primary", use_container_width=True)  
 with col2:  
     reset_clicked = st.button("🔄 重置", use_container_width=True)  
   
@@ -106,14 +108,12 @@ if send_clicked and user_input.strip():
         st.session_state.messages.append({"role": "user", "content": user_input})  
         st.session_state.messages.append({"role": "assistant", "content": reply})  
         st.session_state.dialogue_count += 1  
-        st.session_state.user_input = ""  
     st.rerun()  
   
 if reset_clicked:  
     st.session_state.engine.reset_conversation()  
     st.session_state.messages = []  
     st.session_state.dialogue_count = 0  
-    st.session_state.user_input = ""  
     st.rerun()  
   
 st.markdown("---")  
