@@ -5,11 +5,13 @@ import hashlib
   
 class Database:  
     def __init__(self):  
-        url = st.secrets.get("SUPABASE_URL", "")  
-        key = st.secrets.get("SUPABASE_SERVICE_KEY", "")  
-        if not url or not key:  
+        # 强制使用正确的地址和密钥  
+        self.url = "https://zgyzjxryvlgwzqkqfkoo.supabase.co "  
+        self.key = "sb_secret_1Bi1unY-W2GkrzhDgKfqlw_M0GjMQXB"  
+          
+        if not self.url or not self.key:  
             raise ValueError("Supabase 配置未设置")  
-        self.client: Client = create_client(url, key)  
+        self.client: Client = create_client(self.url, self.key)  
       
     def hash_password(self, password: str) -> str:  
         return hashlib.sha256(password.encode()).hexdigest()  
