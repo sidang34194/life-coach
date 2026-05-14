@@ -1,19 +1,19 @@
-"""Supabase 数据库操作 - 智能自动匹配版 (自动寻找能通的连接)"""  
+"""Supabase 数据库操作 - 终极自动匹配版"""  
 import streamlit as st  
 import requests  
 import hashlib  
-import time  
   
 class Database:  
     def __init__(self):  
-        # 尝试列表：所有可能的 URL 和 Key 组合  
+        # 1. 定义所有可能的组合  
         urls = [  
             "https://ydrypovzrfvmotlsaomw.supabase.co/rest/v1 ",  
-            "https://zgyzjxryvlgwzqkqfkoo.supabase.co/rest/v1 " # 尝试第二个网址  
+            "https://zgyzjxryvlgwzqkqfkoo.supabase.co/rest/v1 "  
         ]  
+          
         keys = [  
-            "sb_secret_B4kQHMkT3BHSN-K-lGIISw_7dVuYO0K",  
-            "sb_secret_1Bi1unY-W2GkrzhDgKfqlw_M0GjMQXB" # 尝试第二个密钥  
+            "sb_secret_B4kQHMkT3BHSN-K-lGIISw_7dVuYO0K", # 你刚才生成的新 Key  
+            "sb_secret_1Bi1unY-W2GkrzhDgKfqlw_M0GjMQXB" # 之前的旧 Key  
         ]  
           
         self.url = ""  
@@ -21,7 +21,7 @@ class Database:
         self.is_online = False  
         self.error_msg = "正在尝试连接..."  
           
-        # 自动遍历寻找能通的连接  
+        # 2. 自动遍历寻找能通的连接  
         print("DEBUG: 开始自动匹配数据库连接...")  
         for u in urls:  
             for k in keys:  
@@ -33,7 +33,7 @@ class Database:
                 try:  
                     # 尝试查询 users 表  
                     res = requests.get(f"{u}/users?limit=1", headers=headers, timeout=5)  
-                    # 如果返回 200 OK，或者 404 (表不存在但连上了)，都算成功  
+                    # 如果返回 200 (成功) 或 404 (表不存在但连上了)，都算成功  
                     if res.status_code == 200 or res.status_code == 404:  
                         self.url = u  
                         self.api_key = k  
@@ -73,7 +73,7 @@ class Database:
             if insert.status_code == 201:  
                 return {"success": True, "user": insert.json()[0]}  
             else:  
-                return {"success": False, "error": f"注册失败 (Status {insert.status_code}): {insert.text}"}  
+                return {"success": False, "error": f"注册失败 (Status {insert.status_code})"}  
         except Exception as e:  
             return {"success": False, "error": str(e)}  
   
