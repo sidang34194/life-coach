@@ -1,12 +1,13 @@
-"""教练对话引擎 - 自动模式版"""  
+"""教练对话引擎"""  
+import streamlit as st  
 from zhipuai import ZhipuAI  
-from utils.config import Config  
   
 class CoachEngine:  
     def __init__(self):  
-        if not Config.ZHIPU_API_KEY:  
+        api_key = st.secrets.get("ZHIPU_API_KEY", "")  
+        if not api_key:  
             raise ValueError("API Key 未配置")  
-        self.client = ZhipuAI(api_key=Config.ZHIPU_API_KEY)  
+        self.client = ZhipuAI(api_key=api_key)  
         self.conversation_history = []  
       
     def get_response(self, user_input: str) -> str:  
@@ -31,7 +32,7 @@ class CoachEngine:
           
         try:  
             response = self.client.chat.completions.create(  
-                model=Config.ZHIPU_MODEL,  
+                model="glm-4-flash",  
                 messages=messages,  
                 temperature=0.8,  
                 max_tokens=500  
