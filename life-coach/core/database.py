@@ -1,11 +1,11 @@
-"""Supabase 数据库操作 - 修复语法错误版"""  
+"""Supabase 数据库操作 - 诊断模式"""  
 import streamlit as st  
 import requests  
 import hashlib  
   
 class Database:  
     def __init__(self):  
-        # 固定使用你刚才成功连通的地址和密钥  
+        # 1. 强制锁定正确的网址和密钥（防止连错项目）  
         self.url = "https://ydrypovzrfvmotlsaomw.supabase.co/rest/v1 "  
         self.api_key = "sb_secret_B4kQHMkT3BHSN-K-lGIISw_7dVuYO0K"  
           
@@ -13,22 +13,23 @@ class Database:
         self.error_msg = "正在连接..."  
           
         try:  
-            # 简单测试连接  
             headers = {  
                 "apikey": self.api_key,  
                 "Authorization": f"Bearer {self.api_key}",  
                 "Content-Type": "application/json"  
             }  
-            # 尝试获取 users 表（即使表不存在，只要连接通了就算成功）  
+            # 测试连接：尝试读取 users 表的前 1 行  
             res = requests.get(f"{self.url}/users?limit=1", headers=headers, timeout=5)  
               
-            # 只要不是 500/503 服务器错误，就算连上了  
-            if res.status_code < 500:  
+            # 如果返回 200 (成功) 或 206 (部分内容)，说明表存在且连上了  
+            if res.status_code == 200 or res.status_code == 206:  
                 self.is_online = True  
                 self.error_msg = ""  
                 print(f"✅ 数据库连接成功！URL: {self.url}")  
+            elif res.status_code == 404:  
+                self.error_msg = "⚠️ 连上了，但找不到 users 表！请检查是否连错了项目（应该是 ydryp... 那个）。"  
             else:  
-                self.error_msg = f"服务器错误：{res.status_code}"  
+                self.error_msg = f"连接状态异常: {res.status_code}"  
         except Exception as e:  
             self.error_msg = str(e)  
             print(f"❌ 数据库连接失败：{self.error_msg}")  
@@ -71,7 +72,8 @@ class Database:
             if insert.status_code == 201:  
                 return {"success": True, "user": insert.json()[0]}  
             else:  
-                return {"success": False, "error": f"注册失败 (Status {insert.status_code})"}  
+                # 🔍 诊断：显示具体的报错原因（比如是哪个表不存在）  
+                return {"success": False, "error": f"注册失败 (Status {insert.status_code}): {insert.text}"}  
         except Exception as e:  
             return {"success": False, "error": str(e)}  
   
