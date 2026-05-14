@@ -5,7 +5,6 @@
 import streamlit as st  
 from core.coach_engine import CoachEngine  
 from core.emotion_detector import EmotionDetector  
-from core.database import Database  
   
 st.set_page_config(  
     page_title="生命动力 · AI 教练",  
@@ -24,12 +23,15 @@ st.markdown("""
 </style>  
 """, unsafe_allow_html=True)  
   
+# 初始化数据库（带错误处理）  
 if "db" not in st.session_state:  
     try:  
+        from core.database import Database  
         st.session_state.db = Database()  
         st.session_state.db_ready = True  
-    except:  
+    except Exception as e:  
         st.session_state.db_ready = False  
+        st.session_state.db_error = str(e)  
   
 if "logged_in" not in st.session_state:  
     st.session_state.logged_in = False  
@@ -43,9 +45,15 @@ if "messages" not in st.session_state:
 if "dialogue_count" not in st.session_state:  
     st.session_state.dialogue_count = 0  
   
+# ========== 登录/注册页面 ==========  
 if not st.session_state.logged_in:  
     st.markdown('<p class="main-header">🌱 生命动力 · AI 教练</p>', unsafe_allow_html=True)  
     st.markdown('<p class="sub-header">聆听 · 发问 · 区分 · 回应</p>', unsafe_allow_html=True)  
+      
+    if not st.session_state.db_ready:  
+        st.error("数据库连接失败：" + st.session_state.get("db_error", "未知错误"))  
+        st.info("请检查 Supabase 配置是否正确")  
+        st.stop()  
       
     tab1, tab2 = st.tabs(["🔑 登录", "📝 注册"])  
       
@@ -89,6 +97,7 @@ if not st.session_state.logged_in:
                 st.warning("请填写用户名和密码")  
     st.stop()  
   
+# ========== 主聊天页面 ==========  
 user = st.session_state.user  
 display_name = user.get("display_name", user.get("username", "学员"))  
   
@@ -101,7 +110,7 @@ with st.sidebar:
     st.markdown("- 对话会保存，随时可查看")  
     st.markdown("---")  
       
-    if st.button("📜 查看历史对话", use_container_width=True):  
+    if st.button(" 查看历史对话", use_container_width=True):  
         st.session_state.show_history = not st.session_state.get("show_history", False)  
       
     if st.session_state.get("show_history"):  
@@ -161,7 +170,7 @@ col1, col2 = st.columns([3, 1])
 with col1:  
     send_clicked = st.button("✉️ 发送", type="primary", use_container_width=True)  
 with col2:  
-    reset_clicked = st.button("🔄 重置", use_container_width=True)  
+    reset_clicked = st.button(" 重置", use_container_width=True)  
   
 if send_clicked and user_input.strip():  
     with st.spinner("教练正在思考..."):  
@@ -176,13 +185,14 @@ if send_clicked and user_input.strip():
         st.session_state.messages.append({"role": "assistant", "content": reply})  
         st.session_state.dialogue_count += 1  
           
-        st.session_state.db.save_conversation(  
-            user_id=user["id"],  
-            user_input=user_input,  
-            coach_reply=reply,  
-            emotion=emotion,  
-            topic=topic  
-        )  
+        if st.session_state.db_ready:  
+            st.session_state.db.save_conversation(  
+                user_id=user["id"],  
+                user_input=user_input,  
+                coach_reply=reply,  
+                emotion=emotion,  
+                topic=topic  
+            )  
     st.rerun()  
   
 if reset_clicked:  
