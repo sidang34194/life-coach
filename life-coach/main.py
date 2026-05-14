@@ -45,7 +45,7 @@ if "dialogue_count" not in st.session_state:
 with st.sidebar:  
     st.markdown("### 🌱 菜单")  
               # 显示数据库状态  
-  
+      # 显示数据库状态  
     db = st.session_state.get("db")  
     if db:  
         if db.is_online:  
