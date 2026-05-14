@@ -1,19 +1,18 @@
-"""Supabase 数据库操作 - 终极自动匹配版"""  
+"""Supabase 数据库操作 - 智能检查版"""  
 import streamlit as st  
 import requests  
 import hashlib  
   
 class Database:  
     def __init__(self):  
-        # 1. 定义所有可能的组合  
+        # 优先尝试 zgyz，其次 ydryp  
         urls = [  
-            "https://ydrypovzrfvmotlsaomw.supabase.co/rest/v1 ",  
-            "https://zgyzjxryvlgwzqkqfkoo.supabase.co/rest/v1 "  
+            "https://zgyzjxryvlgwzqkqfkoo.supabase.co/rest/v1 ",  
+            "https://ydrypovzrfvmotlsaomw.supabase.co/rest/v1 "  
         ]  
-          
         keys = [  
-            "sb_secret_B4kQHMkT3BHSN-K-lGIISw_7dVuYO0K", # 你刚才生成的新 Key  
-            "sb_secret_1Bi1unY-W2GkrzhDgKfqlw_M0GjMQXB" # 之前的旧 Key  
+            "sb_secret_B4kQHMkT3BHSN-K-lGIISw_7dVuYO0K",  
+            "sb_secret_1Bi1unY-W2GkrzhDgKfqlw_M0GjMQXB"  
         ]  
           
         self.url = ""  
@@ -21,31 +20,32 @@ class Database:
         self.is_online = False  
         self.error_msg = "正在尝试连接..."  
           
-        # 2. 自动遍历寻找能通的连接  
         print("DEBUG: 开始自动匹配数据库连接...")  
         for u in urls:  
             for k in keys:  
-                headers = {  
-                    "apikey": k,  
-                    "Authorization": f"Bearer {k}",  
-                    "Content-Type": "application/json"  
-                }  
+                headers = {"apikey": k, "Authorization": f"Bearer {k}"}  
                 try:  
-                    # 尝试查询 users 表  
+                    # 检查 users 表是否存在  
                     res = requests.get(f"{u}/users?limit=1", headers=headers, timeout=5)  
-                    # 如果返回 200 (成功) 或 404 (表不存在但连上了)，都算成功  
-                    if res.status_code == 200 or res.status_code == 404:  
+                    if res.status_code == 200:  
                         self.url = u  
                         self.api_key = k  
                         self.is_online = True  
                         self.error_msg = ""  
-                        print(f"✅ 匹配成功！使用 URL: {u}")  
-                        return # 找到就停止  
+                        print(f"✅ 匹配成功！Table found at {u}")  
+                        return  
+                    elif res.status_code == 404:  
+                        # 连上了但表不存在  
+                        self.url = u  
+                        self.api_key = k  
+                        self.is_online = False  
+                        self.error_msg = "数据库已连接，但缺少 'users' 表！请运行 SQL 建表。"  
+                        print(f"⚠️ 连接到 {u}，但表不存在。")  
+                        return  
                 except:  
                     continue  
                       
-        self.error_msg = "所有组合均失败。请检查 Supabase 项目是否 Active。"  
-        print("❌ 匹配失败。")  
+        self.error_msg = "无法连接到任何数据库。"  
   
     def hash_password(self, password: str) -> str:  
         return hashlib.sha256(password.encode()).hexdigest()  
@@ -58,12 +58,10 @@ class Database:
         headers = {"apikey": self.api_key, "Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json", "Prefer": "return=representation"}  
           
         try:  
-            # 检查用户  
             check = requests.get(f"{self.url}/users?username=eq.{username}", headers=headers)  
             if check.status_code == 200 and len(check.json()) > 0:  
                 return {"success": False, "error": "用户名已存在"}  
               
-            # 注册  
             insert = requests.post(  
                 f"{self.url}/users",  
                 headers=headers,  
