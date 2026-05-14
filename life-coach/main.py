@@ -45,14 +45,13 @@ if "dialogue_count" not in st.session_state:
 with st.sidebar:  
     st.markdown("### 🌱 菜单")  
               # 显示数据库状态  
+  
     db = st.session_state.get("db")  
     if db:  
         if db.is_online:  
-            st.success("🟢 数据库：已连接 (永久保存)")  
+            st.success(f"🟢 数据库：已连接\nURL: {db.url[:30]}...")  
         else:  
-            st.error(f"🔴 数据库：离线！\n原因：{db.error_msg[:50]}...")  
-    else:  
-        st.warning("数据库未初始化")  
+            st.error(f"🔴 数据库：离线！\n原因：{db.error_msg}")  
 
 
     # 管理员入口  
