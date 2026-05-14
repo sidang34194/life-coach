@@ -1,13 +1,13 @@
-"""Supabase 数据库操作 - 修复版"""  
+"""Supabase 数据库操作 - 最终修复版"""  
 from supabase import create_client, Client  
 import streamlit as st  
 import hashlib  
   
 class Database:  
     def __init__(self):  
-        # 修正：使用截图地址栏中显示的 zgy 项目地址  
-        self.url = "https://zgyzjxryvlgwzqkqfkoo.supabase.co "  
-        self.key = "sb_secret_1Bi1unY-W2GkrzhDgKfqlw_M0GjMQXB"  
+        # 修正：使用你最早提供的地址和密钥（这是正确的组合）  
+        self.url = "https://ydrypovzrfvmotlsaomw.supabase.co "  
+        self.key = "sb_secret_xdljfyVFI8fcSFolTr3sMg_6Bc4yph3"  
           
         if not self.url or not self.key:  
             raise ValueError("Supabase 配置未设置")  
