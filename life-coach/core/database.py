@@ -9,6 +9,8 @@ class Database:
         self.url = "https://zgyzjxryvlgwzqkqfkoo.supabase.co "  
         self.key = "sb_secret_1Bi1unY-W2GkrzhDgKfqlw_M0GjMQXB"  
           
+        print(f"DEBUG: 正在尝试连接数据库地址 -> {self.url}")  
+          
         if not self.url or not self.key:  
             raise ValueError("Supabase 配置未设置")  
         self.client: Client = create_client(self.url, self.key)  
