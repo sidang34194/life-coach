@@ -1,19 +1,24 @@
-"""Supabase 数据库操作 - 最终确认版"""  
+"""Supabase 数据库操作"""  
 from supabase import create_client, Client  
 import streamlit as st  
 import hashlib  
   
 class Database:  
     def __init__(self):  
-        # 使用你刚才浏览器验证过的正确地址  
-        self.url = "https://ydrypovzrfvmotlsaomw.supabase.co "  
-        # 使用对应的密钥  
-        self.key = "sb_secret_xdljfyVFI8fcSFolTr3sMg_6Bc4yph3"  
+        # 强制从 Streamlit Settings 读取配置（优先级最高）  
+        try:  
+            self.url = st.secrets["SUPABASE_URL"]  
+            self.key = st.secrets["SUPABASE_SERVICE_KEY"]  
+        except KeyError:  
+            # 如果没读到，使用默认值（备用）  
+            self.url = "https://ydrypovzrfvmotlsaomw.supabase.co "  
+            self.key = "sb_secret_xdljfyVFI8fcSFolTr3sMg_6Bc4yph3"  
+              
+        print(f"DEBUG: 正在连接 -> {self.url}")  
           
         if not self.url or not self.key:  
             raise ValueError("Supabase 配置未设置")  
           
-        print(f"DEBUG: 正在连接 -> {self.url}")  
         self.client: Client = create_client(self.url, self.key)  
       
     def hash_password(self, password: str) -> str:  
