@@ -5,11 +5,9 @@ import hashlib
   
 class Database:  
     def __init__(self):  
-        # 正确的数据库地址  
+        # 最终确认的正确地址  
         self.url = "https://ydrypovzrfvmotlsaomw.supabase.co "  
         self.key = "sb_secret_1Bi1unY-W2GkrzhDgKfqlw_M0GjMQXB"  
-          
-        print(f"DEBUG: 正在连接 -> {self.url}")  
           
         if not self.url or not self.key:  
             raise ValueError("Supabase 配置未设置")  
