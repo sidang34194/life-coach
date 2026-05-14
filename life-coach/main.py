@@ -44,7 +44,13 @@ if "dialogue_count" not in st.session_state:
 # ========== 侧边栏 ==========  
 with st.sidebar:  
     st.markdown("### 🌱 菜单")  
-      
+          # 显示数据库状态  
+    db_status = st.session_state.db  
+    if db_status.is_online:  
+        st.success("🟢 数据库：已连接 (永久保存)")  
+    else:  
+        st.warning("🔴 数据库：离线模式 (刷新将丢失)")  
+
     # 管理员入口  
     st.markdown("---")  
     st.markdown("### 🔐 管理员入口")  
